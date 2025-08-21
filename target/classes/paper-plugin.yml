@@ -1,0 +1,33 @@
+name: ItemBan
+version: 1.0.0
+main: bladesmp.bladesmp.ItemBan
+api-version: 1.21
+folia-supported: true
+author: MrEnte_
+description: Ein Plugin das Items im Combat sperrt und komplett verbieten kann
+website: store.bladesmp.de
+
+dependencies:
+  server:
+    paper:
+      load: BEFORE
+      required: false
+
+# Commands werden jetzt in der Haupt-Klasse definiert
+commands:
+  itemban:
+    description: Haupt-Command für ItemBan
+    aliases: [ib, itemb]
+    permission: itemban.admin
+    usage: /<command> [reload|info|combat <player>]
+
+permissions:
+  itemban.admin:
+    description: Erlaubt die Verwaltung des ItemBan Plugins
+    default: op
+  itemban.bypass.combat:
+    description: Umgeht Combat Item-Beschränkungen
+    default: false
+  itemban.bypass.banned:
+    description: Umgeht komplett verbotene Items
+    default: false

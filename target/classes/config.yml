@@ -1,0 +1,61 @@
+# ItemRestriction Plugin Konfiguration
+#
+# Dieses Plugin ermöglicht es, Items zu beschränken oder komplett zu verbieten
+#
+# Combat System: Wenn ein Spieler Schaden nimmt oder austeilt, wird er für
+# eine bestimmte Zeit im "Combat" markiert und kann bestimmte Items nicht nutzen
+
+# Combat Einstellungen
+combat:
+  # Dauer in Sekunden, wie lange ein Spieler im Combat bleibt nach einem Hit
+  duration: 10
+
+  # Items die während des Combats nicht genutzt werden können
+  # Diese Items sind nur temporär gesperrt, bis der Combat vorbei ist
+  restricted-items:
+    - ENDER_PEARL          # Enderpearls
+    - CHORUS_FRUIT          # Chorus Fruit
+    - TOTEM_OF_UNDYING     # Totems
+    - GOLDEN_APPLE         # Goldäpfel
+    - ENCHANTED_GOLDEN_APPLE # Notch-Äpfel
+    - SHIELD               # Schilde
+    - BOW                  # Bögen
+    - CROSSBOW             # Armbrüste
+    - POTION               # Tränke
+    - SPLASH_POTION        # Wurftränke
+    - LINGERING_POTION     # Verweilende Tränke
+
+# Items die komplett verboten sind
+# Diese Items können GAR NICHT genutzt, aufgehoben oder bewegt werden
+banned-items:
+  - TNT                   # TNT
+  - TNT_MINECART         # TNT Loren
+  - BEDROCK              # Bedrock
+  - BARRIER              # Barrieren
+  - COMMAND_BLOCK        # Command Blocks
+  - CHAIN_COMMAND_BLOCK  # Chain Command Blocks
+  - REPEATING_COMMAND_BLOCK # Repeating Command Blocks
+  - STRUCTURE_BLOCK      # Structure Blocks
+  - JIGSAW               # Jigsaw Blocks
+  - DEBUG_STICK          # Debug Stick
+  - KNOWLEDGE_BOOK       # Knowledge Book
+  - SPAWNER              # Spawner
+  - END_PORTAL_FRAME     # End Portal Rahmen
+  # Füge hier weitere Items hinzu die komplett verboten sein sollen
+
+# Mögliche Item-Namen findest du hier:
+# https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
+#
+# Beispiele für weitere Items die oft restricted werden:
+# - ELYTRA (Elytren)
+# - FIREWORK_ROCKET (Feuerwerk)
+# - MILK_BUCKET (Milcheimer)
+# - HONEY_BOTTLE (Honigflasche)
+# - SUSPICIOUS_STEW (Verdächtiger Eintopf)
+# - TURTLE_HELMET (Schildkrötenpanzer)
+
+# Nachrichten (aktuell hardcoded im Plugin, könnte erweitert werden)
+messages:
+  combat-restriction: "§c§lDu kannst dieses Item nicht im Combat verwenden!"
+  banned-item: "§c§lDieses Item ist nicht erlaubt!"
+  combat-remaining: "§7(%time%s verbleibend)"

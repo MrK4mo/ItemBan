@@ -1,0 +1,140 @@
+# ItemBan Plugin Konfiguration
+#
+# Dieses Plugin ermöglicht es, Items zu beschränken oder komplett zu verbieten
+#
+# Combat System: Wenn ein Spieler Schaden nimmt oder austeilt, wird er für
+# eine bestimmte Zeit im "Combat" markiert und kann bestimmte Items nicht nutzen
+
+# Combat Einstellungen
+combat:
+  # Dauer in Sekunden, wie lange ein Spieler im Combat bleibt nach einem Hit
+  duration: 10
+
+  # Items die während des Combats nicht genutzt werden können
+  # Diese Items sind nur temporär gesperrt, bis der Combat vorbei ist
+  restricted-items:
+    - ENDER_PEARL          # Enderpearls
+    - CHORUS_FRUIT          # Chorus Fruit
+    - TOTEM_OF_UNDYING     # Totems
+    - GOLDEN_APPLE         # Goldäpfel
+    - ENCHANTED_GOLDEN_APPLE # Notch-Äpfel
+    - SHIELD               # Schilde
+    - BOW                  # Bögen
+    - CROSSBOW             # Armbrüste
+    - POTION               # Tränke
+    - SPLASH_POTION        # Wurftränke
+    - LINGERING_POTION     # Verweilende Tränke
+
+# Items die komplett verboten sind
+# Diese Items können GAR NICHT genutzt, aufgehoben oder bewegt werden
+banned-items:
+  - TNT                   # TNT
+  - TNT_MINECART         # TNT Loren
+  - BEDROCK              # Bedrock
+  - BARRIER              # Barrieren
+  - COMMAND_BLOCK        # Command Blocks
+  - CHAIN_COMMAND_BLOCK  # Chain Command Blocks
+  - REPEATING_COMMAND_BLOCK # Repeating Command Blocks
+  - STRUCTURE_BLOCK      # Structure Blocks
+  - JIGSAW               # Jigsaw Blocks
+  - DEBUG_STICK          # Debug Stick
+  - KNOWLEDGE_BOOK       # Knowledge Book
+  - SPAWNER              # Spawner
+  - END_PORTAL_FRAME     # End Portal Rahmen
+
+# WorldGuard Integration
+# Erfordert WorldGuard Plugin! Falls nicht installiert, wird diese Sektion ignoriert
+worldguard:
+  # Ob WorldGuard Integration aktiviert ist
+  enabled: true
+
+  # Regionsspezifische Item-Verbote
+  # Format: "region-name": ["ITEM1", "ITEM2", ...]
+  region-banned-items:
+    # Beispiele:
+    spawn:
+      - LAVA_BUCKET
+      - WATER_BUCKET
+      - FLINT_AND_STEEL
+      - TNT
+
+    pvp-arena:
+      - TOTEM_OF_UNDYING
+      - GOLDEN_APPLE
+      - ENCHANTED_GOLDEN_APPLE
+
+    build-contest:
+      - COMMAND_BLOCK
+      - BARRIER
+      - BEDROCK
+      - SPAWNER
+
+  # Regionsspezifische Combat-Beschränkungen
+  # Format: "region-name": ["ITEM1", "ITEM2", ...]
+  region-combat-items:
+    # Beispiele:
+    spawn:
+      - ENDER_PEARL
+      - CHORUS_FRUIT
+
+    safe-zone:
+      - SWORD
+      - BOW
+      - CROSSBOW
+      - TRIDENT
+
+# Nachrichten-Einstellungen
+messages:
+  # Ob Nachrichten angezeigt werden sollen
+  enabled: true
+
+  # Nachrichten-Texte (unterstützt Color Codes mit &)
+  banned-item: "&c&lDieses Item ist nicht erlaubt!"
+  combat-restriction: "&c&lDu kannst dieses Item nicht im Combat verwenden!"
+  combat-remaining: "&7(%time%s verbleibend)"
+
+  # Regionsspezifische Nachrichten
+  region-banned: "&c&lDieses Item ist in dieser Region nicht erlaubt!"
+  region-combat: "&c&lDieses Item ist in dieser Region während Combat nicht erlaubt!"
+
+  # Command Nachrichten
+  no-permission: "&c&lKeine Berechtigung!"
+  plugin-reloaded: "&a&lItemBan Plugin wurde neu geladen!"
+  player-not-found: "&c&lSpieler nicht gefunden!"
+  combat-status-yes: "&e%player% &7ist im Combat (&c%time%s&7 verbleibend)"
+  combat-status-no: "&e%player% &7ist &anicht &7im Combat"
+
+  # Hilfe-Nachrichten
+  help-header: "&6&l=== ItemBan Hilfe ==="
+  help-reload: "&e/itemban reload &7- Plugin neu laden"
+  help-info: "&e/itemban info &7- Plugin Informationen anzeigen"
+  help-combat: "&e/itemban combat <player> &7- Combat-Status prüfen"
+  help-toggle: "&e/itemban toggle &7- Nachrichten an/aus"
+
+  # Info-Nachrichten
+  info-header: "&6&l=== ItemBan Info ==="
+  info-combat-duration: "&eCombat-Dauer: &f%duration% Sekunden"
+  info-banned-items: "&eGebannte Items: &f%count%"
+  info-combat-items: "&eCombat-beschränkte Items: &f%count%"
+  info-players-in-combat: "&eSpieler im Combat: &f%count%"
+  info-worldguard: "&eWorldGuard: &f%status%"
+  info-messages: "&eNachrichten: &f%status%"
+
+# Debug-Einstellungen
+debug:
+  # Ob Debug-Nachrichten in der Konsole angezeigt werden
+  enabled: false
+
+  # Ob Item-Interaktionen geloggt werden
+  log-interactions: false
+
+# Mögliche Item-Namen findest du hier:
+# https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
+#
+# Beispiele für weitere Items:
+# - ELYTRA (Elytren)
+# - FIREWORK_ROCKET (Feuerwerk)
+# - MILK_BUCKET (Milcheimer)
+# - HONEY_BOTTLE (Honigflasche)
+# - SUSPICIOUS_STEW (Verdächtiger Eintopf)
+# - TURTLE_HELMET (Schildkrötenpanzer)
