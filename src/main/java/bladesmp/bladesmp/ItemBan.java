@@ -68,12 +68,22 @@ public class ItemBan extends JavaPlugin implements Listener {
 
     private void checkWorldGuardAvailability() {
         try {
-            Class.forName("com.sk89q.worldguard.WorldGuard");
-            worldGuardAvailable = true;
-            getLogger().info("WorldGuard erkannt - Integration verfügbar");
+            // Prüfe ob WorldGuard Plugin geladen ist
+            if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
+                // Versuche WorldGuard Klassen zu laden
+                Class.forName("com.sk89q.worldguard.WorldGuard");
+                Class.forName("com.sk89q.worldedit.bukkit.BukkitAdapter");
+                Class.forName("com.sk89q.worldguard.protection.regions.RegionContainer");
+                worldGuardAvailable = true;
+                getLogger().info("WorldGuard erfolgreich erkannt - Integration aktiviert");
+            } else {
+                worldGuardAvailable = false;
+                getLogger().info("WorldGuard Plugin nicht gefunden");
+            }
         } catch (ClassNotFoundException e) {
             worldGuardAvailable = false;
-            getLogger().info("WorldGuard nicht gefunden - Regionen-Features deaktiviert");
+            getLogger().warning("WorldGuard Plugin gefunden, aber Klassen nicht verfügbar: " + e.getMessage());
+            getLogger().info("Regionen-Features deaktiviert");
         }
     }
 
@@ -289,135 +299,71 @@ public class ItemBan extends JavaPlugin implements Listener {
                 }
             }
         }
-    }restricted-items: " + item);
-}
-        }
-                }
+    }
 
-@Override
-public void onDisable() {
-    combatPlayers.clear();
-    getLogger().info("ItemBan Plugin deaktiviert!");
-}
+    @Override
+    public void onDisable() {
+        combatPlayers.clear();
+        getLogger().info("ItemBan Plugin deaktiviert!");
+    }
 
-private void startCombatCleanupTask() {
-    try {
-        // Versuche Folia Scheduler API zu verwenden
-        if (isFoliaServer()) {
-            // Folia Global Region Scheduler
-            getServer().getGlobalRegionScheduler().runAtFixedRate(this, (task) -> {
-                long currentTime = System.currentTimeMillis();
-                combatPlayers.entrySet().removeIf(entry ->
-                        currentTime - entry.getValue() > (combatDuration * 1000L));
-            }, 20L, 20L); // Läuft jede Sekunde
-            getLogger().info("Verwende Folia GlobalRegionScheduler für Combat-Cleanup");
-        } else {
-            // Standard Bukkit Scheduler für Paper/Spigot
-            new BukkitRunnable() {
-                @Override
-                public void run() {
+    private void startCombatCleanupTask() {
+        try {
+            // Versuche Folia Scheduler API zu verwenden
+            if (isFoliaServer()) {
+                // Folia Global Region Scheduler
+                getServer().getGlobalRegionScheduler().runAtFixedRate(this, (task) -> {
                     long currentTime = System.currentTimeMillis();
                     combatPlayers.entrySet().removeIf(entry ->
                             currentTime - entry.getValue() > (combatDuration * 1000L));
-                }
-            }.runTaskTimer(this, 20L, 20L);
-            getLogger().info("Verwende Standard BukkitScheduler für Combat-Cleanup");
+                }, 20L, 20L); // Läuft jede Sekunde
+                getLogger().info("Verwende Folia GlobalRegionScheduler für Combat-Cleanup");
+            } else {
+                // Standard Bukkit Scheduler für Paper/Spigot
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        long currentTime = System.currentTimeMillis();
+                        combatPlayers.entrySet().removeIf(entry ->
+                                currentTime - entry.getValue() > (combatDuration * 1000L));
+                    }
+                }.runTaskTimer(this, 20L, 20L);
+                getLogger().info("Verwende Standard BukkitScheduler für Combat-Cleanup");
+            }
+        } catch (Exception e) {
+            getLogger().warning("Konnte Combat-Cleanup Task nicht starten: " + e.getMessage());
+            getLogger().warning("Combat-Timer werden nicht automatisch bereinigt - funktioniert trotzdem!");
         }
-    } catch (Exception e) {
-        getLogger().warning("Konnte Combat-Cleanup Task nicht starten: " + e.getMessage());
-        getLogger().warning("Combat-Timer werden nicht automatisch bereinigt - funktioniert trotzdem!");
-    }
-}
-
-private boolean isFoliaServer() {
-    try {
-        // Prüfe ob Folia Klassen verfügbar sind
-        Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-        return true;
-    } catch (ClassNotFoundException e) {
-        return false;
-    }
-}
-
-@EventHandler
-public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-    // Combat-Timer für beide Spieler setzen
-    if (event.getDamager() instanceof Player) {
-        Player damager = (Player) event.getDamager();
-        combatPlayers.put(damager.getUniqueId(), System.currentTimeMillis());
     }
 
-    if (event.getEntity() instanceof Player) {
-        Player victim = (Player) event.getEntity();
-        combatPlayers.put(victim.getUniqueId(), System.currentTimeMillis());
-    }
-}
-
-@EventHandler
-public void onPlayerInteract(PlayerInteractEvent event) {
-    Player player = event.getPlayer();
-    Material item = event.getMaterial();
-
-    // Bypass-Permission prüfen
-    if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
-        return;
-    }
-    if (combatRestrictedItems.contains(item) && player.hasPermission("itemban.bypass.combat")) {
-        return;
+    private boolean isFoliaServer() {
+        try {
+            // Prüfe ob Folia Klassen verfügbar sind
+            Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
-    // Prüfen ob Item komplett gebannt ist
-    if (bannedItems.contains(item)) {
-        event.setCancelled(true);
-        player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
-        return;
+    @EventHandler
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Combat-Timer für beide Spieler setzen
+        if (event.getDamager() instanceof Player) {
+            Player damager = (Player) event.getDamager();
+            combatPlayers.put(damager.getUniqueId(), System.currentTimeMillis());
+        }
+
+        if (event.getEntity() instanceof Player) {
+            Player victim = (Player) event.getEntity();
+            combatPlayers.put(victim.getUniqueId(), System.currentTimeMillis());
+        }
     }
 
-    // Prüfen ob Spieler im Combat ist und Item restricted ist
-    if (isInCombat(player) && combatRestrictedItems.contains(item)) {
-        event.setCancelled(true);
-        long remainingTime = getRemainingCombatTime(player);
-        player.sendMessage("§c§lDu kannst dieses Item nicht im Combat verwenden! §7(" + remainingTime + "s verbleibend)");
-    }
-}
-
-@EventHandler
-public void onPlayerItemHeld(PlayerItemHeldEvent event) {
-    Player player = event.getPlayer();
-    Material newItem = player.getInventory().getItem(event.getNewSlot()) != null ?
-            player.getInventory().getItem(event.getNewSlot()).getType() : Material.AIR;
-
-    // Bypass-Permission prüfen
-    if (bannedItems.contains(newItem) && player.hasPermission("itemban.bypass.banned")) {
-        return;
-    }
-    if (combatRestrictedItems.contains(newItem) && player.hasPermission("itemban.bypass.combat")) {
-        return;
-    }
-
-    // Prüfen ob Item komplett gebannt ist
-    if (bannedItems.contains(newItem)) {
-        event.setCancelled(true);
-        player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
-        return;
-    }
-
-    // Prüfen ob Spieler im Combat ist und Item restricted ist
-    if (isInCombat(player) && combatRestrictedItems.contains(newItem)) {
-        event.setCancelled(true);
-        long remainingTime = getRemainingCombatTime(player);
-        player.sendMessage("§c§lDu kannst dieses Item nicht im Combat halten! §7(" + remainingTime + "s verbleibend)");
-    }
-}
-
-@EventHandler
-public void onInventoryClick(InventoryClickEvent event) {
-    if (!(event.getWhoClicked() instanceof Player)) return;
-
-    Player player = (Player) event.getWhoClicked();
-
-    if (event.getCurrentItem() != null) {
-        Material item = event.getCurrentItem().getType();
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        Material item = event.getMaterial();
 
         // Bypass-Permission prüfen
         if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
@@ -427,10 +373,26 @@ public void onInventoryClick(InventoryClickEvent event) {
             return;
         }
 
+        // WorldGuard Regionen-Check
+        if (worldGuardAvailable && worldGuardEnabled) {
+            if (isItemBannedInRegion(player.getLocation(), item)) {
+                event.setCancelled(true);
+                sendMessage(player, "region-banned");
+                return;
+            }
+
+            if (isInCombat(player) && isItemCombatRestrictedInRegion(player.getLocation(), item)) {
+                event.setCancelled(true);
+                long remainingTime = getRemainingCombatTime(player);
+                sendMessage(player, "region-combat", remainingTime);
+                return;
+            }
+        }
+
         // Prüfen ob Item komplett gebannt ist
         if (bannedItems.contains(item)) {
             event.setCancelled(true);
-            player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
+            sendMessage(player, "banned-item");
             return;
         }
 
@@ -438,91 +400,329 @@ public void onInventoryClick(InventoryClickEvent event) {
         if (isInCombat(player) && combatRestrictedItems.contains(item)) {
             event.setCancelled(true);
             long remainingTime = getRemainingCombatTime(player);
-            player.sendMessage("§c§lDu kannst dieses Item nicht im Combat bewegen! §7(" + remainingTime + "s verbleibend)");
+            sendMessage(player, "combat-restriction", remainingTime);
         }
     }
-}
 
-@EventHandler
-public void onPlayerDropItem(PlayerDropItemEvent event) {
-    Player player = event.getPlayer();
-    Material item = event.getItemDrop().getItemStack().getType();
+    @EventHandler
+    public void onPlayerItemHeld(PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        Material newItem = player.getInventory().getItem(event.getNewSlot()) != null ?
+                player.getInventory().getItem(event.getNewSlot()).getType() : Material.AIR;
 
-    // Bypass-Permission prüfen
-    if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
-        return;
+        // Bypass-Permission prüfen
+        if (bannedItems.contains(newItem) && player.hasPermission("itemban.bypass.banned")) {
+            return;
+        }
+        if (combatRestrictedItems.contains(newItem) && player.hasPermission("itemban.bypass.combat")) {
+            return;
+        }
+
+        // WorldGuard Regionen-Check
+        if (worldGuardAvailable && worldGuardEnabled) {
+            if (isItemBannedInRegion(player.getLocation(), newItem)) {
+                event.setCancelled(true);
+                sendMessage(player, "region-banned");
+                return;
+            }
+
+            if (isInCombat(player) && isItemCombatRestrictedInRegion(player.getLocation(), newItem)) {
+                event.setCancelled(true);
+                long remainingTime = getRemainingCombatTime(player);
+                sendMessage(player, "region-combat", remainingTime);
+                return;
+            }
+        }
+
+        // Prüfen ob Item komplett gebannt ist
+        if (bannedItems.contains(newItem)) {
+            event.setCancelled(true);
+            sendMessage(player, "banned-item");
+            return;
+        }
+
+        // Prüfen ob Spieler im Combat ist und Item restricted ist
+        if (isInCombat(player) && combatRestrictedItems.contains(newItem)) {
+            event.setCancelled(true);
+            long remainingTime = getRemainingCombatTime(player);
+            sendMessage(player, "combat-restriction", remainingTime);
+        }
     }
-    if (combatRestrictedItems.contains(item) && player.hasPermission("itemban.bypass.combat")) {
-        return;
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+
+        Player player = (Player) event.getWhoClicked();
+
+        if (event.getCurrentItem() != null) {
+            Material item = event.getCurrentItem().getType();
+            Location location = player.getLocation();
+
+            // Bypass-Permission prüfen
+            if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
+                return;
+            }
+            if (combatRestrictedItems.contains(item) && player.hasPermission("itemban.bypass.combat")) {
+                return;
+            }
+
+            // WorldGuard Regionen-Check
+            if (worldGuardAvailable && worldGuardEnabled) {
+                if (isItemBannedInRegion(location, item)) {
+                    event.setCancelled(true);
+                    sendMessage(player, "region-banned");
+                    return;
+                }
+
+                if (isInCombat(player) && isItemCombatRestrictedInRegion(location, item)) {
+                    event.setCancelled(true);
+                    long remainingTime = getRemainingCombatTime(player);
+                    sendMessage(player, "region-combat", remainingTime);
+                    return;
+                }
+            }
+
+            // Prüfen ob Item komplett gebannt ist
+            if (bannedItems.contains(item)) {
+                event.setCancelled(true);
+                sendMessage(player, "banned-item");
+                return;
+            }
+
+            // Prüfen ob Spieler im Combat ist und Item restricted ist
+            if (isInCombat(player) && combatRestrictedItems.contains(item)) {
+                event.setCancelled(true);
+                long remainingTime = getRemainingCombatTime(player);
+                sendMessage(player, "combat-restriction", remainingTime);
+            }
+        }
     }
 
-    // Prüfen ob Item komplett gebannt ist
-    if (bannedItems.contains(item)) {
-        event.setCancelled(true);
-        player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
-        return;
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        Material item = event.getItemDrop().getItemStack().getType();
+
+        // Bypass-Permission prüfen
+        if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
+            return;
+        }
+        if (combatRestrictedItems.contains(item) && player.hasPermission("itemban.bypass.combat")) {
+            return;
+        }
+
+        // WorldGuard Regionen-Check
+        if (worldGuardAvailable && worldGuardEnabled) {
+            if (isItemBannedInRegion(player.getLocation(), item)) {
+                event.setCancelled(true);
+                sendMessage(player, "region-banned");
+                return;
+            }
+
+            if (isInCombat(player) && isItemCombatRestrictedInRegion(player.getLocation(), item)) {
+                event.setCancelled(true);
+                long remainingTime = getRemainingCombatTime(player);
+                sendMessage(player, "region-combat", remainingTime);
+                return;
+            }
+        }
+
+        // Prüfen ob Item komplett gebannt ist
+        if (bannedItems.contains(item)) {
+            event.setCancelled(true);
+            sendMessage(player, "banned-item");
+            return;
+        }
+
+        // Prüfen ob Spieler im Combat ist und Item restricted ist
+        if (isInCombat(player) && combatRestrictedItems.contains(item)) {
+            event.setCancelled(true);
+            long remainingTime = getRemainingCombatTime(player);
+            sendMessage(player, "combat-restriction", remainingTime);
+        }
     }
 
-    // Prüfen ob Spieler im Combat ist und Item restricted ist
-    if (isInCombat(player) && combatRestrictedItems.contains(item)) {
-        event.setCancelled(true);
-        long remainingTime = getRemainingCombatTime(player);
-        player.sendMessage("§c§lDu kannst dieses Item nicht im Combat droppen! §7(" + remainingTime + "s verbleibend)");
+    @EventHandler
+    public void onPlayerPickupItem(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
+        Material item = event.getItem().getItemStack().getType();
+
+        // Bypass-Permission prüfen
+        if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
+            return;
+        }
+
+        // WorldGuard Regionen-Check
+        if (worldGuardAvailable && worldGuardEnabled) {
+            if (isItemBannedInRegion(player.getLocation(), item)) {
+                event.setCancelled(true);
+                sendMessage(player, "region-banned");
+                return;
+            }
+        }
+
+        // Prüfen ob Item komplett gebannt ist
+        if (bannedItems.contains(item)) {
+            event.setCancelled(true);
+            sendMessage(player, "banned-item");
+        }
     }
-}
 
-@EventHandler
-public void onPlayerPickupItem(PlayerPickupItemEvent event) {
-    Player player = event.getPlayer();
-    Material item = event.getItem().getItemStack().getType();
+    // WorldGuard Integration Methoden
+    private boolean isItemBannedInRegion(Location location, Material item) {
+        if (!worldGuardAvailable || !worldGuardEnabled) {
+            return false;
+        }
 
-    // Bypass-Permission prüfen
-    if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
-        return;
+        try {
+            RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+            RegionQuery query = container.createQuery();
+            ApplicableRegionSet regions = query.getApplicableRegions(BukkitAdapter.adapt(location));
+
+            for (ProtectedRegion region : regions) {
+                String regionName = region.getId().toLowerCase();
+                Set<Material> bannedInRegion = regionBannedItems.get(regionName);
+                if (bannedInRegion != null && bannedInRegion.contains(item)) {
+                    if (debugEnabled) {
+                        getLogger().info("Item " + item + " ist in Region " + regionName + " gebannt");
+                    }
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            if (debugEnabled) {
+                getLogger().warning("Fehler beim WorldGuard Region-Check: " + e.getMessage());
+            }
+        }
+
+        return false;
     }
 
-    // Prüfen ob Item komplett gebannt ist
-    if (bannedItems.contains(item)) {
-        event.setCancelled(true);
-        player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
+    private boolean isItemCombatRestrictedInRegion(Location location, Material item) {
+        if (!worldGuardAvailable || !worldGuardEnabled) {
+            return false;
+        }
+
+        try {
+            RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+            RegionQuery query = container.createQuery();
+            ApplicableRegionSet regions = query.getApplicableRegions(BukkitAdapter.adapt(location));
+
+            for (ProtectedRegion region : regions) {
+                String regionName = region.getId().toLowerCase();
+                Set<Material> combatRestrictedInRegion = regionCombatItems.get(regionName);
+                if (combatRestrictedInRegion != null && combatRestrictedInRegion.contains(item)) {
+                    if (debugEnabled) {
+                        getLogger().info("Item " + item + " ist in Region " + regionName + " combat-beschränkt");
+                    }
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            if (debugEnabled) {
+                getLogger().warning("Fehler beim WorldGuard Combat-Region-Check: " + e.getMessage());
+            }
+        }
+
+        return false;
     }
-}
 
-public boolean isInCombat(Player player) {
-    Long combatTime = combatPlayers.get(player.getUniqueId());
-    if (combatTime == null) return false;
+    // Nachrichten-System
+    private void sendMessage(Player player, String messageKey) {
+        sendMessage(player, messageKey, -1);
+    }
 
-    return (System.currentTimeMillis() - combatTime) < (combatDuration * 1000L);
-}
+    private void sendMessage(Player player, String messageKey, long remainingTime) {
+        if (!shouldSendMessage(player)) {
+            return;
+        }
 
-public long getRemainingCombatTime(Player player) {
-    Long combatTime = combatPlayers.get(player.getUniqueId());
-    if (combatTime == null) return 0;
+        String message = getMessage(messageKey);
+        if (remainingTime > 0) {
+            message += " " + getMessage("combat-remaining").replace("%time%", String.valueOf(remainingTime));
+        }
 
-    long elapsed = System.currentTimeMillis() - combatTime;
-    long remaining = (combatDuration * 1000L) - elapsed;
-    return Math.max(0, remaining / 1000L);
-}
+        player.sendMessage(message);
 
-// Reload-Command für Admins
-public void reloadPlugin() {
-    loadConfiguration();
-}
+        if (logInteractions) {
+            getLogger().info("Nachricht an " + player.getName() + ": " + messageKey +
+                    (remainingTime > 0 ? " (Combat: " + remainingTime + "s)" : ""));
+        }
+    }
 
-// Getter-Methoden für Commands
-public int getCombatDuration() {
-    return combatDuration;
-}
+    private boolean shouldSendMessage(Player player) {
+        return playerMessagesEnabled.getOrDefault(player.getUniqueId(), messagesEnabled);
+    }
 
-public Set<Material> getBannedItems() {
-    return new HashSet<>(bannedItems);
-}
+    private String getMessage(String key) {
+        String message = getConfig().getString("messages." + key);
+        if (message == null) {
+            // Fallback-Nachrichten
+            switch (key) {
+                case "banned-item": return "§c§lDieses Item ist nicht erlaubt!";
+                case "combat-restriction": return "§c§lDu kannst dieses Item nicht im Combat verwenden!";
+                case "combat-remaining": return "§7(%time%s verbleibend)";
+                case "region-banned": return "§c§lDieses Item ist in dieser Region nicht erlaubt!";
+                case "region-combat": return "§c§lDieses Item ist in dieser Region während Combat nicht erlaubt!";
+                case "no-permission": return "§c§lKeine Berechtigung!";
+                case "plugin-reloaded": return "§a§lItemBan Plugin wurde neu geladen!";
+                case "player-not-found": return "§c§lSpieler nicht gefunden!";
+                case "combat-status-yes": return "§e%player% §7ist im Combat (§c%time%s§7 verbleibend)";
+                case "combat-status-no": return "§e%player% §7ist §anicht §7im Combat";
+                case "help-header": return "§6§l=== ItemBan Hilfe ===";
+                case "help-reload": return "§e/itemban reload §7- Plugin neu laden";
+                case "help-info": return "§e/itemban info §7- Plugin Informationen anzeigen";
+                case "help-combat": return "§e/itemban combat <player> §7- Combat-Status prüfen";
+                case "help-toggle": return "§e/itemban toggle §7- Nachrichten an/aus";
+                case "info-header": return "§6§l=== ItemBan Info ===";
+                case "info-combat-duration": return "§eCombat-Dauer: §f%duration% Sekunden";
+                case "info-banned-items": return "§eGebannte Items: §f%count%";
+                case "info-combat-items": return "§eCombat-beschränkte Items: §f%count%";
+                case "info-players-in-combat": return "§eSpieler im Combat: §f%count%";
+                case "info-worldguard": return "§eWorldGuard: §f%status%";
+                case "info-messages": return "§eNachrichten: §f%status%";
+                default: return "§cUnbekannte Nachricht: " + key;
+            }
+        }
+        return ChatColor.translateAlternateColorCodes('&', message);
+    }
 
-public Set<Material> getCombatRestrictedItems() {
-    return new HashSet<>(combatRestrictedItems);
-}
+    public boolean isInCombat(Player player) {
+        Long combatTime = combatPlayers.get(player.getUniqueId());
+        if (combatTime == null) return false;
 
-public Map<UUID, Long> getCombatPlayers() {
-    return new HashMap<>(combatPlayers);
-}
+        return (System.currentTimeMillis() - combatTime) < (combatDuration * 1000L);
+    }
+
+    public long getRemainingCombatTime(Player player) {
+        Long combatTime = combatPlayers.get(player.getUniqueId());
+        if (combatTime == null) return 0;
+
+        long elapsed = System.currentTimeMillis() - combatTime;
+        long remaining = (combatDuration * 1000L) - elapsed;
+        return Math.max(0, remaining / 1000L);
+    }
+
+    // Reload-Command für Admins
+    public void reloadPlugin() {
+        loadConfiguration();
+    }
+
+    // Getter-Methoden für Commands
+    public int getCombatDuration() {
+        return combatDuration;
+    }
+
+    public Set<Material> getBannedItems() {
+        return new HashSet<>(bannedItems);
+    }
+
+    public Set<Material> getCombatRestrictedItems() {
+        return new HashSet<>(combatRestrictedItems);
+    }
+
+    public Map<UUID, Long> getCombatPlayers() {
+        return new HashMap<>(combatPlayers);
+    }
 }

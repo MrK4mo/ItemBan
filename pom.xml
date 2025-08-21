@@ -16,10 +16,22 @@
     </properties>
 
     <repositories>
-        <!-- Spigot/Paper Repository für Folia -->
+        <!-- Paper Repository -->
         <repository>
-            <id>papermc</id>
+            <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+
+        <!-- EngineHub Repository für WorldGuard/WorldEdit -->
+        <repository>
+            <id>enginehub-maven</id>
+            <url>https://maven.enginehub.org/repo/</url>
+        </repository>
+
+        <!-- Sonatype Repository -->
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
     </repositories>
 
@@ -44,7 +56,7 @@
         <dependency>
             <groupId>com.sk89q.worldguard</groupId>
             <artifactId>worldguard-bukkit</artifactId>
-            <version>7.0.9</version>
+            <version>7.0.11</version>
             <scope>provided</scope>
         </dependency>
 
@@ -52,7 +64,7 @@
         <dependency>
             <groupId>com.sk89q.worldedit</groupId>
             <artifactId>worldedit-bukkit</artifactId>
-            <version>7.2.15</version>
+            <version>7.3.6</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
