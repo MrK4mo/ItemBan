@@ -11,7 +11,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,7 +29,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ItemBan extends JavaPlugin implements Listener {
+public class ItemBan extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
 
     private final Map<UUID, Long> combatPlayers = new ConcurrentHashMap<>();
     private final Set<Material> bannedItems = new HashSet<>();
@@ -55,6 +57,9 @@ public class ItemBan extends JavaPlugin implements Listener {
         // Event Listener registrieren
         Bukkit.getPluginManager().registerEvents(this, this);
 
+        // Commands manuell registrieren
+        registerCommands();
+
         // Task für Combat-Cleanup starten
         startCombatCleanupTask();
 
@@ -64,6 +69,44 @@ public class ItemBan extends JavaPlugin implements Listener {
         getLogger().info("Combat-Dauer: " + combatDuration + " Sekunden");
         getLogger().info("WorldGuard: " + (worldGuardAvailable && worldGuardEnabled ? "Aktiviert" : "Deaktiviert"));
         getLogger().info("Nachrichten: " + (messagesEnabled ? "Aktiviert" : "Deaktiviert"));
+    }
+
+    private void registerCommands() {
+        try {
+            // Command manuell registrieren für Paper Plugins
+            org.bukkit.command.PluginCommand command = this.registerCommand("itemban", this);
+            command.setAliases(Arrays.asList("ib", "itemb"));
+            command.setDescription("Haupt-Command für ItemBan");
+            command.setUsage("/itemban [reload|info|combat <player>|toggle]");
+            command.setPermission("itemban.admin");
+            command.setTabCompleter(this);
+
+            getLogger().info("Command 'itemban' erfolgreich registriert!");
+        } catch (Exception e) {
+            getLogger().severe("Fehler beim Registrieren des Commands: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Hilfsmethode für manuelle Command-Registrierung
+    private org.bukkit.command.PluginCommand registerCommand(String name, CommandExecutor executor) {
+        try {
+            // Reflektiv einen PluginCommand erstellen
+            java.lang.reflect.Constructor<org.bukkit.command.PluginCommand> constructor =
+                    org.bukkit.command.PluginCommand.class.getDeclaredConstructor(String.class, org.bukkit.plugin.Plugin.class);
+            constructor.setAccessible(true);
+
+            org.bukkit.command.PluginCommand command = constructor.newInstance(name, this);
+            command.setExecutor(executor);
+
+            // Command zur Server-Command-Map hinzufügen
+            getServer().getCommandMap().register(this.getDescription().getName(), command);
+
+            return command;
+        } catch (Exception e) {
+            getLogger().severe("Fehler beim manuellen Registrieren des Commands '" + name + "': " + e.getMessage());
+            return null;
+        }
     }
 
     private void checkWorldGuardAvailability() {
