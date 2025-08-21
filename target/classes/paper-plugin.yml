@@ -1,9 +1,9 @@
 name: ItemBan
 version: 1.0.0
-main: de.itemban.ItemBan
+main: bladesmp.bladesmp.ItemBan
 api-version: 1.21
 folia-supported: true
-author: YourName
+author: TheRealCock
 description: Ein Plugin das Items im Combat sperrt und komplett verbieten kann
 website: https://github.com/yourname/ItemBan
 
