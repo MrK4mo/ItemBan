@@ -68,22 +68,12 @@ public class ItemBan extends JavaPlugin implements Listener {
 
     private void checkWorldGuardAvailability() {
         try {
-            // Prüfe ob WorldGuard Plugin geladen ist
-            if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
-                // Versuche WorldGuard Klassen zu laden
-                Class.forName("com.sk89q.worldguard.protection.regions.RegionContainer");
-                Class.forName("com.sk89q.worldedit.bukkit.BukkitAdapter");
-                worldGuardAvailable = true;
-                getLogger().info("WorldGuard erfolgreich erkannt - Integration aktiviert");
-            } else {
-                worldGuardAvailable = false;
-                getLogger().info("WorldGuard Plugin nicht gefunden");
-            }
-        } catch (ClassNotFoundException e) {
+            Class.forName("com.sk89q.worldguard.WorldGuard");
             worldGuardAvailable = true;
+            getLogger().info("WorldGuard erkannt - Integration verfügbar");
+        } catch (ClassNotFoundException e) {
             worldGuardAvailable = false;
-            getLogger().warning("WorldGuard Plugin gefunden, aber Klassen nicht verfügbar: " + e.getMessage());
-            getLogger().info("Regionen-Features deaktiviert");
+            getLogger().info("WorldGuard nicht gefunden - Regionen-Features deaktiviert");
         }
     }
 
@@ -428,7 +418,6 @@ public void onInventoryClick(InventoryClickEvent event) {
 
     if (event.getCurrentItem() != null) {
         Material item = event.getCurrentItem().getType();
-        Location location = event.getClickedBlock() != null ? event.getClickedBlock().getLocation() : player.getLocation();
 
         // Bypass-Permission prüfen
         if (bannedItems.contains(item) && player.hasPermission("itemban.bypass.banned")) {
@@ -438,26 +427,10 @@ public void onInventoryClick(InventoryClickEvent event) {
             return;
         }
 
-        // WorldGuard Regionen-Check
-        if (worldGuardAvailable && worldGuardEnabled) {
-            if (isItemBannedInRegion(location, item)) {
-                event.setCancelled(true);
-                sendMessage(player, "region-banned");
-                return;
-            }
-            
-            if (isInCombat(player) && isItemCombatRestrictedInRegion(location, item)) {
-                event.setCancelled(true);
-                long remainingTime = getRemainingCombatTime(player);
-                sendMessage(player, "region-combat", remainingTime);
-                return;
-            }
-        }
-
         // Prüfen ob Item komplett gebannt ist
         if (bannedItems.contains(item)) {
             event.setCancelled(true);
-            sendMessage(player, "banned-item");
+            player.sendMessage("§c§lDieses Item ist nicht erlaubt!");
             return;
         }
 
@@ -465,7 +438,7 @@ public void onInventoryClick(InventoryClickEvent event) {
         if (isInCombat(player) && combatRestrictedItems.contains(item)) {
             event.setCancelled(true);
             long remainingTime = getRemainingCombatTime(player);
-            sendMessage(player, "combat-restriction", remainingTime);
+            player.sendMessage("§c§lDu kannst dieses Item nicht im Combat bewegen! §7(" + remainingTime + "s verbleibend)");
         }
     }
 }
